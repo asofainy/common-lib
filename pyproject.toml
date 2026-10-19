@@ -9,4 +9,7 @@ description = "Shared utilities for microservices"
 requires-python = ">=3.10"
 
 [tool.setuptools]
-packages = ["common_lib"]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["common_lib", "common_lib.*"]

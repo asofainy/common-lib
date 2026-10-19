@@ -2,9 +2,8 @@
 import logging
 import os
 import sqlalchemy
-import psycopg2
 
-from psycopg2 import IntegrityError
+from sqlalchemy.exc import IntegrityError
 
 from fastapi import Query, Path, HTTPException, Depends
 from typing import Annotated
@@ -51,24 +50,16 @@ def get_session():
 
 def handle_exception(e, session):
     logger.error("Catched exception of type : %s", e.__class__.__name__)
-    if e.__class__.__name__ == 'IntegrityError':
+    if e.__class__.__name__ in {'IntegrityError', 'PendingRollbackError'}:
         logger.error(e)
         logger.warning("Performing a session rollback")
         session.rollback()
-    #elif isinstance(e, sqlalchemy.exc.PendingRollbackError):
-    elif e.__class__.__name__ == 'PendingRollbackError':
-        logger.warning("Performing a session rollback")
-        session.rollback()
-    #if isinstance(e, psycopg2.errors.UniqueViolation):
-    #    pass
-    #
     else:
         logger.error(type(e))
-        raise(e)
+        session.rollback()
+    raise e
 
-def add(item, session=None):
-    if session is None:
-        session = next(get_session())
+def add(item, session = next(get_session())):
     r = None
     try:
         session.add(item)
@@ -115,9 +106,7 @@ def select_all_by_date(model_class, by_date, offset = None, limit = None, sessio
         handle_exception(e, session)
     return r
 
-def get(object_id, model_class, session=None):
-    if session is None:
-        session = next(get_session())
+def get(object_id, model_class, session = next(get_session())):
     r = None
     try:
         r = session.get(model_class, object_id)
@@ -154,22 +143,17 @@ def delete_by_key(key, value, model_class, session):
         handle_exception(e, session)
     return r
 
-def update(object_id, model_class, model_object, session=None):
-    if session is None:
-        session = next(get_session())
+def update(object_id, model_class, model_object, session = next(get_session())):
     try:
-        r = session.get(model_class, object_id)
+        r = session.get(object_id, model_class,)
         if r :
             r.sqlmodel_update(model_object)
-            session.add(r)
-            session.commit()
+            session.add( r)
     except Exception as e:
         handle_exception(e, session)
     return r
 
-def delete(object_id, model_class, session=None):
-    if session is None:
-        session = next(get_session())
+def delete(object_id, model_class, session = next(get_session()) ):
     try:
         r = session.get(model_class, object_id)
         if r:
