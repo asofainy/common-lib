@@ -41,9 +41,20 @@ def run_service(service_name: str) -> int:
         print(f"Main entrypoint not found: {main_file}", file=sys.stderr)
         return 1
 
+    env = os.environ.copy()
+    pythonpath_entries = []
+    shared_common_lib = repo_root / 'shared' / 'common-lib'
+    if shared_common_lib.exists():
+        pythonpath_entries.append(str(shared_common_lib))
+    pythonpath_entries.append(str(service_dir / 'src'))
+    existing_pythonpath = env.get('PYTHONPATH')
+    if existing_pythonpath:
+        pythonpath_entries.append(existing_pythonpath)
+    env['PYTHONPATH'] = os.pathsep.join(filter(None, pythonpath_entries))
+
     cmd = [sys.executable, str(main_file)]
     print("$", shlex.join(cmd))
-    return subprocess.run(cmd, cwd=str(service_dir)).returncode
+    return subprocess.run(cmd, cwd=str(service_dir), env=env).returncode
 
 
 if __name__ == '__main__':

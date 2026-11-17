@@ -41,7 +41,10 @@ ENGINE = create_engine(URL)
 
 #SQLAlchemyInstrumentor().instrument(engine=ENGINE)
 
-SQLModel.metadata.create_all(ENGINE)
+
+def init_db():
+    SQLModel.metadata.create_all(ENGINE)
+
 
 def get_session():
     global ENGINE
